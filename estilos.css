@@ -661,3 +661,4 @@ html[data-modo="completo"] .sp__abrir, .sp--abierto .sp__abrir { display: none; 
   .portada__sub { font-size: 1.05rem; margin-top: 1rem; }
   .eleccion { margin-top: 1.3rem; }
 }
+.btn { white-space: nowrap; }
