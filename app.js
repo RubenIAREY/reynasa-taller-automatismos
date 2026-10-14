@@ -5,6 +5,16 @@
   var doc = document.documentElement;
   var BASE = doc.getAttribute('data-base') || location.href.split('#')[0].split('?')[0];
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var movil = matchMedia('(max-width: 860px)').matches;
+  if (movil) {
+    // En el móvil el raíl horizontal y el método fijado se leen mejor como una página normal.
+    Array.prototype.forEach.call(document.querySelectorAll('.rail-sec, .pico'), function (s) {
+      s.setAttribute('data-sc-act', 'flow');
+      s.removeAttribute('data-sc-span');
+      s.classList.add('es-flujo');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sc-pan]'), function (r) { r.removeAttribute('data-sc-pan'); });
+  }
 
   function guarda(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function lee(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -22,6 +32,11 @@
       b.setAttribute('aria-checked', on ? 'true' : 'false');
       var t = b.querySelector('.modo__txt');
       if (t) t.textContent = on ? (b.dataset.on || 'Completo') : (b.dataset.off || 'Sin spoilers');
+    });
+    $$('[data-pdf]').forEach(function (a) {
+      a.href = 'descargas/secciones/' + a.dataset.pdf + (on ? '-completo.pdf' : '-sin-spoilers.pdf');
+      var v = a.querySelector('.pdf-version');
+      if (v) v.textContent = on ? 'completa' : 'sin spoilers';
     });
     $$('.sp').forEach(function (sp) {
       var cuerpo = sp.querySelector('.sp__cuerpo');
@@ -102,7 +117,16 @@
     }
     if (innerWidth > 1100) folio.style.setProperty('--folio-ink', tintaEn(30, innerHeight / 2));
   }
-  function pide() { if (!pendiente) { pendiente = true; requestAnimationFrame(folioTick); } }
+  var yPrev = scrollY;
+  function barraMovil() {
+    if (!folio || innerWidth > 1100) return;
+    var y = scrollY, abajo = y > yPrev + 6, arriba = y < yPrev - 6;
+    if (y < 120 || (innerHeight + y) >= doc.scrollHeight - 40) folio.removeAttribute('data-oculto');
+    else if (abajo) folio.setAttribute('data-oculto', '');
+    else if (arriba) folio.removeAttribute('data-oculto');
+    if (abajo || arriba) yPrev = y;
+  }
+  function pide() { barraMovil(); if (!pendiente) { pendiente = true; requestAnimationFrame(folioTick); } }
   addEventListener('scroll', pide, { passive: true });
   addEventListener('resize', pide);
   folioTick();
@@ -116,7 +140,19 @@
     $$('[data-abre-indice]').forEach(function (b) { b.addEventListener('click', abreIndice); });
     indice.querySelector('.indice__cerrar').addEventListener('click', cierraIndice);
     indice.addEventListener('click', function (e) { if (e.target === indice) cierraIndice(); });
-    $$('a', indice).forEach(function (a) { a.addEventListener('click', function () { cierraIndice(); }); });
+    // Desde el índice se salta directo: un scroll suave de 30.000 px en el móvil se hace eterno.
+    $$('a[href^="#"]', indice).forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        var destino = document.querySelector(a.getAttribute('href'));
+        cierraIndice();
+        if (!destino) return;
+        e.preventDefault();
+        doc.style.scrollBehavior = 'auto';
+        destino.scrollIntoView({ block: 'start' });
+        history.replaceState(null, '', a.getAttribute('href'));
+        setTimeout(function () { doc.style.scrollBehavior = ''; }, 50);
+      });
+    });
     addEventListener('keydown', function (e) { if (e.key === 'Escape' && indice.hasAttribute('data-abierto')) cierraIndice(); });
   }
 
@@ -128,18 +164,6 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, function () { prompt('Copia este enlace:', url); });
       else prompt('Copia este enlace:', url);
     });
-  });
-  $$('[data-imprimir]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      var id = b.dataset.imprimir;
-      $$('[data-parte="' + id + '"]').forEach(function (el) { el.classList.add('imprimir'); });
-      document.body.setAttribute('data-imprimir', id);
-      setTimeout(function () { print(); }, 60);
-    });
-  });
-  addEventListener('afterprint', function () {
-    document.body.removeAttribute('data-imprimir');
-    $$('.imprimir').forEach(function (el) { el.classList.remove('imprimir'); });
   });
 
   /* --------------------------------------------------------- visor -- */
