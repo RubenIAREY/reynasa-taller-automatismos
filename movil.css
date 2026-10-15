@@ -156,3 +156,5 @@
   .reloj, .trazo, .sig, .chip--pdf { display: none !important; }
   body { padding: 0; }
 }
+
+@media (min-width: 861px) { .trazo--h4 { top: 19vh; } }
